@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlencode
+import datetime
 
 def google_news_scraper(config):
     query_vars = config.get('queryVars', {})

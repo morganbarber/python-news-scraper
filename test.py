@@ -11,5 +11,5 @@ config = {
     'prettyURLs': True
 }
 
-results = python_news_scraper.google_news_scraper(config)
+results = python_news_scraper.google_news_scraper(config, 5)
 print(results)

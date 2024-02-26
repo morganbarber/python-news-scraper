@@ -3,9 +3,7 @@ from bs4 import BeautifulSoup
 from urllib.parse import urlencode
 import datetime
 
-from .get_redirect import get_redirect
-
-def google_news_scraper(config):
+def google_news_scraper(config, num_articles=5):
     query_vars = config.get('queryVars', {})
     query_string = urlencode(query_vars)
     search_term = config.get('searchTerm', '')
@@ -63,6 +61,11 @@ def google_news_scraper(config):
 
         results.append(main_article)
         print(main_article)
+
+        num_articles -= 1
+
+        if num_articles == 0:
+            break
 
     if config.get('prettyURLs'):
         for article in results:

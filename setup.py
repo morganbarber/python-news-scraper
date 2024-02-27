@@ -8,5 +8,5 @@ setup(
     author_email='morganbarber928@gmail.com',
     description='A python package to scrape news.',
     packages=find_packages(),    
-    install_requires=['requests', 'beautifulsoup4'],
+    install_requires=['requests', 'beautifulsoup4', 'pyppeteer'],
 )

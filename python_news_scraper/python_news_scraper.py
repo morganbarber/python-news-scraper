@@ -1,79 +1,76 @@
+import datetime
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlencode
-import datetime
+from .buildQueryString import buildQueryString
+from .getArticleContent import getArticleContent
+from .getPrettyUrl import get_pretty_url
 
-def google_news_scraper(config, num_articles=5):
-    query_vars = config.get('queryVars', {})
-    query_string = urlencode(query_vars)
-    search_term = config.get('searchTerm', '')
-    timeframe = config.get('timeframe', '7d')
-    url = f'https://news.google.com/search?{query_string}&q={search_term}+when:{timeframe}'
-    print(f'SCRAPING NEWS FROM: {url}')
+def googleNewsScraper(userConfig):
+    config = {
+        "prettyURLs": True,
+        "getArticleContent": False,
+        "timeframe": "7d",
+        "puppeteerArgs": [],
+    }
+    config.update(userConfig)
+
+    queryString = buildQueryString(config["queryVars"]) if config["queryVars"] else ""
+    url = f"https://news.google.com/search?{queryString}&q={config['searchTerm']} when:{config.get('timeframe', '7d')}"
+    print(f"SCRAPING NEWS FROM: {url}")
 
     headers = {
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3',
-        'Accept-Encoding': 'gzip',
-        'Accept-Language': 'en-US,en;q=0.9,es;q=0.8',
-        'Upgrade-Insecure-Requests': '1',
-        'Referer': 'https://www.google.com/'
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3",
+        "Accept-Encoding": "gzip",
+        "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+        "Upgrade-Insecure-Requests": "1",
+        "Referer": "https://www.google.com/"
     }
-
     cookies = {
-        'CONSENT': f'YES+cb.{datetime.date.today().strftime("%Y%m%d")}-04-p0.en-GB+FX+667'
+        "CONSENT": f"YES+cb.{datetime.datetime.now().isoformat().split('T')[0].replace('-', '')}-04-p0.en-GB+FX+667"
     }
-
-    print('GETTING NEWS...')
     response = requests.get(url, headers=headers, cookies=cookies)
     content = response.content
-    soup = BeautifulSoup(content, 'html.parser')
 
-    print('PARSING NEWS...')
+    soup = BeautifulSoup(content, 'html.parser')
     articles = soup.find_all('article')
     results = []
+    urlChecklist = []
 
     for article in articles:
-        link = article.find('a', href=True)
-        if link and link['href'].startswith('./article'):
-            link = f'https://news.google.com/{link["href"].replace("./", "")}'
-        else:
-            link = None
-
-        # image = article.find('figure').find('img')
-        # if image:
-            # srcset = image.get('srcset')
-            # if srcset:
-                # srcset = srcset.split(' ')
-                # image = srcset[-2] if srcset else None
-            # else:
-                # image = image.get('src')
-        # else:
-            # image = None
-
-        main_article = {
-            'title': article.find('h4').text if article.find('h4') else article.find('div > div + div > div a').text if article.find('div > div + div > div a') else None,
-            'link': link,
-            # Implementation later: 'image': f'https://news.google.com/{image}' if image and image.startswith('/') else image,
-            'source': article.find('div', {'data-n-tid': True}).text or None,
-            'datetime': datetime.datetime.strptime(article.find('div:last-child time')['datetime'], '%Y-%m-%dT%H:%M:%S.%fZ') if article.find('div:last-child time') else None,
-            'time': article.find('div:last-child time').text if article.find('div:last-child time') else None
+        link_element = article.find('a', href=lambda href: href and href.startswith('./article'))
+        link = link_element.get('href').replace('./', 'https://news.google.com/') if link_element else None
+        if link:
+            urlChecklist.append(link)
+        figure_element = article.find('figure')
+        srcset = figure_element.find('img').get('srcset').split(' ') if figure_element and figure_element.find('img') else []
+        image = srcset[-2] if srcset else figure_element.find('img').get('src') if figure_element and figure_element.find('img') else None
+        if image and image.startswith('/'):
+            image = f"https://news.google.com{image}"
+        title_element = article.find_all('div', {"class": 'm5k28'})[0].find_all('div', {"class": 'B6pJDd'})[0].find_all('div')[0].find_all('a')
+        title = title_element[0].text
+        source_element = article.find('div', {'data-n-tid': True})
+        source = source_element.text if source_element else None
+        datetime_element = article.find_all('div:last-child time')
+        datetime_str = datetime_element.get('datetime') if datetime_element else None
+        datetime_val = datetime.datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M:%S.%fZ") if datetime_str else None
+        time = datetime_element.text if datetime_element else None
+        mainArticle = {
+            "title": title,
+            "link": link,
+            "image": image,
+            "source": source,
+            "datetime": datetime_val,
+            "time": time
         }
+        results.append(mainArticle)
 
-        results.append(main_article)
-        print(main_article)
+    if config["prettyURLs"]:
+        for result in results:
+            new_link = get_pretty_url(result["link"])
+            result["link"] = new_link
 
-        num_articles -= 1
-
-        if num_articles == 0:
-            break
-
-    if config.get('prettyURLs'):
-        for article in results:
-            response = requests.get(article['link'])
-            data = response.content
-            soup = BeautifulSoup(data, 'html.parser')
-            link = soup.find('c-wiz', {'a': {'rel': 'nofollow'}})
-            if link:
-                article['link'] = link.get('href')
-
-    return [result for result in results if result['title']]
+    if config["getArticleContent"]:
+        filterWords = config.get("filterWords", [])
+        results = getArticleContent(results, browser, filterWords)
+    
+    return results

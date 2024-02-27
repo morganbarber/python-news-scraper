@@ -17,27 +17,32 @@ def getArticleContent(articles, filterWords):
 
 def extractArticleContentAndFavicon(article, filterWords):
     try:
-        
-        content = response.text
+        response = requests.get(article['url'])
+        if response.status_code == 200:
+            print("response success")
+            content = response.text
 
-        favicon = extractFavicon(content)
+            favicon = extractFavicon(content)
 
-        soup = BeautifulSoup(content, 'html.parser')
-        articleContent = soup.get_text(separator='\n')
+            soup = BeautifulSoup(content, 'html.parser')
+            articleContent = soup.get_text(separator='\n')
 
-        if not articleContent:
-            return { **article, 'content': '', 'favicon': favicon }
+            if not articleContent:
+                return { **article, 'content': '', 'favicon': favicon }
 
-        hasVerifyMessage = any(w in articleContent.lower() for w in verifyMessages)
-        if hasVerifyMessage:
-            return { **article, 'content': '', 'favicon': favicon }
+            hasVerifyMessage = any(w in articleContent.lower() for w in verifyMessages)
+            if hasVerifyMessage:
+                return { **article, 'content': '', 'favicon': favicon }
 
-        cleanedText = cleanText(articleContent, filterWords)
+            cleanedText = cleanText(articleContent, filterWords)
 
-        if len(cleanedText.split(' ')) < 100:  # Example threshold: 100 words
-            return { **article, 'content': '', 'favicon': favicon }
+            if len(cleanedText.split(' ')) < 100:  # Example threshold: 100 words
+                return { **article, 'content': '', 'favicon': favicon }
 
-        return { **article, 'content': cleanedText, 'favicon': favicon }
+            return { **article, 'content': cleanedText, 'favicon': favicon }
+        else:
+            print("Response fail")
+            return { **article, 'content': '', 'favicon': '' }
     except Exception as error:
         return { **article, 'content': '', 'favicon': '' }
 

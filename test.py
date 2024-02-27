@@ -7,4 +7,4 @@ config = {
 }
 
 results = python_news_scraper.googleNewsScraper(config)
-print(results)
+print(results[0])

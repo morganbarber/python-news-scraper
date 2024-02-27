@@ -1,5 +1,5 @@
 from bs4 import BeautifulSoup
-from pyppeteer import launch
+import requests
 
 verifyMessages = [
     "you are human",
@@ -8,53 +8,43 @@ verifyMessages = [
     "recaptcha"
 ]
 
-async def getArticleContent(articles, filterWords):
-    try:
-        browser = await launch()
-        processedArticlesPromises = [extractArticleContentAndFavicon(article, browser, filterWords) for article in articles]
-        processedArticles = await asyncio.gather(*processedArticlesPromises)
-        await browser.close()
-        return processedArticles
-    except Exception as err:
-        # print("getArticleContent ERROR:", err)
-        return articles
+def getArticleContent(articles, filterWords):
+    processedArticles = []
+    for article in articles:
+        processedArticle = extractArticleContentAndFavicon(article, filterWords)
+        processedArticles.append(processedArticle)
+    return processedArticles
 
-async def extractArticleContentAndFavicon(article, browser, filterWords):
+def extractArticleContentAndFavicon(article, filterWords):
     try:
-        page = await browser.newPage()
-        await page.goto(article['link'], waitUntil='networkidle2')
-        content = await page.content()
+        
+        content = response.text
 
-        favicon = await page.evaluate('''
-            () => {
-                const link = document.querySelector('link[rel="icon"], link[rel="shortcut icon"]');
-                return link ? link.getAttribute('href') : '';
-            }
-        ''')
+        favicon = extractFavicon(content)
 
         soup = BeautifulSoup(content, 'html.parser')
         articleContent = soup.get_text(separator='\n')
 
         if not articleContent:
-            # print("Article content could not be parsed or is empty.")
             return { **article, 'content': '', 'favicon': favicon }
 
         hasVerifyMessage = any(w in articleContent.lower() for w in verifyMessages)
         if hasVerifyMessage:
-            # print("Article requires human verification.")
             return { **article, 'content': '', 'favicon': favicon }
 
         cleanedText = cleanText(articleContent, filterWords)
 
         if len(cleanedText.split(' ')) < 100:  # Example threshold: 100 words
-            # print("Article content is too short and likely not valuable.")
             return { **article, 'content': '', 'favicon': favicon }
 
-        # print("SUCCESSFULLY SCRAPED ARTICLE CONTENT:", cleanedText)
         return { **article, 'content': cleanedText, 'favicon': favicon }
     except Exception as error:
-        # print('Error extracting article with Puppeteer:', error)
         return { **article, 'content': '', 'favicon': '' }
+
+def extractFavicon(content):
+    soup = BeautifulSoup(content, 'html.parser')
+    link = soup.find('link', rel=['icon', 'shortcut icon'])
+    return link['href'] if link else ''
 
 def cleanText(text, filterWords):
     unwantedKeywords = [

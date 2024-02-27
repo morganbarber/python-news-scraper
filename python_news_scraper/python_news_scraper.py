@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 from .buildQueryString import buildQueryString
 from .getArticleContent import getArticleContent
 from .getPrettyUrl import get_pretty_url
+import asyncio
 
 def googleNewsScraper(userConfig):
     config = {
@@ -71,6 +72,6 @@ def googleNewsScraper(userConfig):
 
     if config["getArticleContent"]:
         filterWords = config.get("filterWords", [])
-        results = getArticleContent(results, browser, filterWords)
+        results = asyncio.run(getArticleContent(results, filterWords))
     
     return results

@@ -1,0 +1,18 @@
+[project]
+name = "python_news_scraper"
+version = "1.2.0"
+authors = [
+  { name="Morgan Barber", email="morganbarber928@gmail.com" },
+]
+description = "A python package for web scraping news articles"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/morganbarber/python-news-scraper"
+Issues = "https://github.com/morganbarber/python-news-scraper/issues"

@@ -28,6 +28,7 @@ jobs:
       run: |
         python -m pip install --upgrade datetime
         python -m pip install --upgrade pip
+        python -m pip install --upgrade asyncio
         python -m pip install flake8 pytest
         python -m pip install --upgrade buildtools
         if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
